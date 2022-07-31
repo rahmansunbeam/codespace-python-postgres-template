@@ -48,4 +48,6 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-src/target
+
+# Rust
+rust_proj/target
