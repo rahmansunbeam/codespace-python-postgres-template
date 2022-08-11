@@ -1,0 +1,10 @@
+numpy
+pandas
+geopandas
+earthengine-api
+whitebox
+geemap
+rasterio
+sentinelsat
+statsmodels
+scikit-learn

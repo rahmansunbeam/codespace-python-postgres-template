@@ -9,3 +9,4 @@ __email__  = 'sunbeam.rahman@live.com'
 
 from whitebox import whitebox
 wbt = whitebox.WhiteboxTools()
+print(wbt.version())
