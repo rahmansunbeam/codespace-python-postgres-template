@@ -1,5 +1,5 @@
-# codespace-python-postgres-template
-A repo to create a codespace container with python, postgresql, rust and jupyterlab. 
+# devcontainer-python-pgsql-rust
+A repo to create a devcontainer with python, postgresql, rust and jupyterlab. This can also be used in Codespace.
 
 ### Steps to setup
 - install docker and vscode
