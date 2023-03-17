@@ -10,3 +10,8 @@ A repo to create a devcontainer with python, postgresql, rust and jupyterlab. Th
 
 ### Connecting PostgreSQL with Django
 https://stackpython.medium.com/how-to-start-django-project-with-a-database-postgresql-aaa1d74659d8
+
+### added GPU capability to the container
+- installed NVIDIA driver and CUDA 12.0
+- installed Nvidia Container Toolkit
+- finally installed nvidia-docker2 to have access the host GPU
