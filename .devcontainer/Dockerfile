@@ -1,18 +1,56 @@
-# [Choice] Python version (use -bullseye variants on local arm64/Apple Silicon): 3, 3.10, 3.9, 3.8, 3.7, 3.6, 3-bullseye, 3.10-bullseye, 3.9-bullseye, 3.8-bullseye, 3.7-bullseye, 3.6-bullseye, 3-buster, 3.10-buster, 3.9-buster, 3.8-buster, 3.7-buster, 3.6-buster
-ARG VARIANT=3-bullseye
-FROM mcr.microsoft.com/vscode/devcontainers/python:0-${VARIANT}
+ARG VARIANT=22.04
+FROM ubuntu:${VARIANT}
 
-ENV PYTHONUNBUFFERED 1
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+ARG POSTGRES_USER=pguser
+ARG POSTGRES_PASSWORD=pgpass
+ARG POSTGRES_DB=pgdb
 
-# [Choice] Node.js version: none, lts/*, 16, 14, 12, 10
-ARG NODE_VERSION="none"
-RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
-
-# [Optional] If your requirements rarely change, uncomment this section to add them to the image.
-COPY .devcontainer/requirements.txt /tmp/pip-tmp/
-RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
-   && rm -rf /tmp/pip-tmp
-
-# [Optional] Uncomment this section to install additional OS packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends postgresql-client
+   && apt-get install -y --no-install-recommends ca-certificates sudo gcc make gnupg curl git \
+   wget build-essential libc-dev libssl-dev libpq-dev libsqlite3-dev \
+   python3 python3-pip python3-dev python3-setuptools python3-wheel \
+   postgresql postgresql-contrib \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Rust (with alternate channel if one fails), Jupyterlab and postgresql data
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+   && pip3 --disable-pip-version-check --no-cache-dir install jupyterlab \
+   && mkdir /var/lib/postgresql/data
+   
+# Install additional Python libraries from requirements.txt
+COPY .devcontainer/requirements.txt /tmp/
+RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+# Create the PostgreSQL configuration file in the container
+RUN echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf \
+   && echo "max_connections = 100" >> /etc/postgresql/14/main/postgresql.conf \
+   && echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/14/main/pg_hba.conf \
+   && service postgresql start \
+   && sudo -u postgres psql -c "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';" \
+   && sudo -u postgres createdb -O $POSTGRES_USER $POSTGRES_DB \
+   && service postgresql stop
+
+# Expose the PostgreSQL port
+EXPOSE 5432
+
+# Set up the environment variables
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+# Set environment variables for NVIDIA GPU access
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+
+# add cargo/bin to path
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Switch to non-root user
+RUN groupadd --gid $USER_GID $USERNAME \
+   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+   && mkdir -p /etc/sudoers.d/ \
+   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+   && chmod 0440 /etc/sudoers.d/$USERNAME \
+   && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
