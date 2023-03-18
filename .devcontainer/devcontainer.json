@@ -1,19 +1,18 @@
 {
-    "name": "Python3 with GPU",
+    "name": "Python3, PGSQL, Rust with GPU",
     "context": "..",
     "dockerFile": "Dockerfile",
   
     "remoteUser": "vscode",
   
     "runArgs": [
+      "--name", "python-pgsql-rust-with-GPU",
       "--gpus=all"
     ],
   
     "appPort": [
       "8888:8888", "5432:5432"
     ],
-  
-    // "postCreateCommand": "sudo service postgresql start",
   
     "postStartCommand": "jupyter lab --no-browser --ip=0.0.0.0 --port=8888 --allow-root --ServerApp.token=''"    
   
