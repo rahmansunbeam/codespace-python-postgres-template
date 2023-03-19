@@ -57,11 +57,11 @@ WORKDIR $HOME
 
 # Rust installation
 RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y \
-   && $HOME/.cargo/bin/rustup default stable \
    && $HOME/.cargo/bin/rustup update \
+   && $HOME/.cargo/bin/rustup default stable \
    && $HOME/.cargo/bin/rustup component add rust-analysis rust-src \
    && echo "source $HOME/.cargo/env" >> $HOME/.bashrc \
-   && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+   && sudo apt-get autoremove -y && sudo apt-get clean -y && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # add cargo/bin to path
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
