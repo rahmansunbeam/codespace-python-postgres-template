@@ -19,7 +19,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
    && apt-get install -y --no-install-recommends ca-certificates sudo gcc make gnupg curl git bash \
    wget build-essential libc-dev libssl-dev libpq-dev libsqlite3-dev nodejs \
-   python3 python3-pip python3-dev python3-setuptools python3-wheel \
+   # python3 python3-pip python3-dev python3-setuptools python3-wheel \
    postgresql postgresql-contrib \
    && mkdir /var/lib/postgresql/data \
    && rm -rf /var/lib/apt/lists/*
@@ -31,32 +31,36 @@ RUN groupadd --gid $USER_GID $USERNAME \
    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
    && chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Install additional Python libraries from requirements.txt
-COPY .devcontainer/requirements.txt /tmp/
-RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/requirements.txt && rm /tmp/requirements.txt
-
 # Create the PostgreSQL configuration file in the container
 RUN echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf \
    && echo "max_connections = 100" >> /etc/postgresql/14/main/postgresql.conf \
    && echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/14/main/pg_hba.conf \
    && service postgresql start \
-   && sudo -u postgres psql -c "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';" \
-   && sudo -u postgres createdb -O $POSTGRES_USER $POSTGRES_DB \
+   && su postgres -c "psql -c \"CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';\"" \
+   && su postgres -c "createdb -O $POSTGRES_USER $POSTGRES_DB" \
    && service postgresql stop
 
 # Expose the PostgreSQL port
 EXPOSE 5432
 
-COPY .devcontainer/jupyter_config.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/jupyter_config.sh \
-   && /usr/local/bin/jupyter_config.sh \
-   && rm /usr/local/bin/jupyter_config.sh
-
 USER $USERNAME
 WORKDIR $HOME
 
+COPY .devcontainer/requirements.txt /tmp/
+
+# Install Miniconda and Python libraries from requirements.txt
+RUN curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-py310_23.1.0-1-Linux-x86_64.sh -o /tmp/miniconda.sh \
+   && bash /tmp/miniconda.sh -b -p $HOME/miniconda \
+   && rm /tmp/miniconda.sh \
+   && $HOME/miniconda/bin/conda create --name env pip\
+   && $HOME/miniconda/envs/env/bin/pip --disable-pip-version-check --no-cache-dir install -r /tmp/requirements.txt \
+   && sudo rm -rf /opt/conda/pkgs/* /tmp/* && $HOME/miniconda/bin/conda clean --all -y \
+   && $HOME/miniconda/envs/env/bin/jupyter notebook --generate-config \
+   && echo "c.NotebookApp.allow_origin = '*'" >> ~/.jupyter/jupyter_notebook_config.py
+
 # Rust installation
-RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y \
+RUN mkdir -p $HOME/.cargo \
+   && curl https://sh.rustup.rs -sSf | sh -s -- -y \
    && $HOME/.cargo/bin/rustup update \
    && $HOME/.cargo/bin/rustup default stable \
    && $HOME/.cargo/bin/rustup component add rust-analysis rust-src \
