@@ -51,3 +51,4 @@ docs/_build/
 
 # Rust
 rust_proj/target
+python_proj/.ipynb_checkpoints/test-checkpoint.ipynb

@@ -17,9 +17,8 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
 # add basic libraries, Python3, PostgreSQL and other dependencies
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-   && apt-get install -y --no-install-recommends ca-certificates sudo gcc make gnupg curl git bash \
+   && apt-get install -y --no-install-recommends ca-certificates sudo gcc make gnupg curl git bash vim \
    wget build-essential libc-dev libssl-dev libpq-dev libsqlite3-dev nodejs \
-   # python3 python3-pip python3-dev python3-setuptools python3-wheel \
    postgresql postgresql-contrib \
    && mkdir /var/lib/postgresql/data \
    && rm -rf /var/lib/apt/lists/*
@@ -52,15 +51,15 @@ COPY .devcontainer/requirements.txt /tmp/
 RUN curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-py310_23.1.0-1-Linux-x86_64.sh -o /tmp/miniconda.sh \
    && bash /tmp/miniconda.sh -b -p $HOME/miniconda \
    && rm /tmp/miniconda.sh \
-   && $HOME/miniconda/bin/conda create --name env pip\
-   && $HOME/miniconda/envs/env/bin/pip --disable-pip-version-check --no-cache-dir install -r /tmp/requirements.txt \
-   && sudo rm -rf /opt/conda/pkgs/* /tmp/* && $HOME/miniconda/bin/conda clean --all -y \
-   && $HOME/miniconda/envs/env/bin/jupyter notebook --generate-config \
-   && echo "c.NotebookApp.allow_origin = '*'" >> ~/.jupyter/jupyter_notebook_config.py
-
+   && $HOME/miniconda/bin/pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/requirements.txt \
+   && sudo rm -rf /tmp/* && $HOME/miniconda/bin/conda clean --all -y \
+   && $HOME/miniconda/bin/jupyter notebook --generate-config \
+   && echo "c.NotebookApp.allow_origin = '*'" >> ~/.jupyter/jupyter_notebook_config.py \
+   && echo "PATH=~/miniconda/bin:$PATH" >> ~/.bashrc
+   
 # Rust installation
 RUN mkdir -p $HOME/.cargo \
-   && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+   && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
    && $HOME/.cargo/bin/rustup update \
    && $HOME/.cargo/bin/rustup default stable \
    && $HOME/.cargo/bin/rustup component add rust-analysis rust-src \
